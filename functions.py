@@ -1,11 +1,7 @@
 from typing import Tuple, List
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
-from pandas.api.types import CategoricalDtype
-import seaborn as sns
-
 
 def feature_plot(data: pd.DataFrame, features: List, file_name: str) -> None:
     """Plot the distribution of the features in the dataset.
