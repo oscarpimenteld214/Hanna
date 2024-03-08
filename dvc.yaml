@@ -1,0 +1,18 @@
+stages:
+  prepare:
+    cmd: python .\src\prepare.py data\raw.csv
+    deps:
+    - .\data\raw.csv
+    - .\src\prepare.py
+    outs:
+    - .\data\prepared
+
+  portfolio:
+    cmd: python .\src\portfolio.py .\data\prepared\Data_cleaned_filtered.csv .data\prepared\dtypes_dict.pkl
+    deps:
+    - .\data\prepared\Data_cleaned_filtered.csv
+    - .\data\prepared\dtypes_dict.pkl
+    - .\src\functions.py
+    - .\src\portfolio.py
+    outs:
+    - .\data\portfolio
