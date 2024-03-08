@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def feature_plot(data: pd.DataFrame, features: List, file_name: str) -> None:
+def feature_plot(data: pd.DataFrame, features: List, file_path: str) -> None:
     """Plot the distribution of the features in the dataset.
 
     Args:
@@ -34,8 +34,7 @@ def feature_plot(data: pd.DataFrame, features: List, file_name: str) -> None:
             )
             axes[i].set_xlabel(feature)
     fig.tight_layout()
-    save_path = "images/portfolio_analysis/" + file_name
-    plt.savefig(save_path, bbox_inches="tight")
+    plt.savefig(file_path, bbox_inches="tight")
     plt.close()
 
 # Computing the WOE and IV tables to select variables
@@ -75,7 +74,7 @@ def woe_iv(
         if var_dtype not in ["object", "category", "interval", "period[M]"]:
             df_filter[variable] = pd.qcut(df_filter[variable], bins, duplicates="drop")
 
-        woe = df_filter.groupby(by=[variable, target], as_index=False).count()
+        woe = df_filter.groupby(by=[variable, target], as_index=False, observed=True).count()
         woe = woe.pivot(index=variable, columns=target, values="index")
         woe.columns.name = None
         woe = woe.reset_index()

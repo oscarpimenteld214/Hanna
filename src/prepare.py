@@ -13,6 +13,8 @@ from scipy.stats import ks_2samp, norm
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 import xgboost as xgb
+import pickle
+import os
 
 import functions as func
 
@@ -98,7 +100,7 @@ categ = [
 # Categorical variables
 for variable in categ:
     categories = raw[variable].drop_duplicates().dropna().tolist()
-    raw[variable] = raw[variable].astype(pd.api.types.CategoricalDtype(categories))
+    raw[variable] = raw[variable].astype(CategoricalDtype(categories))
 
 # Continuous variables
 for variable in cont:
@@ -145,6 +147,14 @@ useless_vars = [
     "SVI_OwnerName",
     "GI_Client_Name",
 ]
+# Variables with few accounts, such that in some categories we don't have bad accounts. This lead to a inf information value. We will remove these variables from the dataset
+useless_vars += [
+    "GI_NRC_State",
+    "GI_Branch_Code",
+    "PL_Loan_Purpose1",
+    "FC_Vehicle_Type",
+    "GI_State.Division",
+]
 raw = raw.drop(columns=useless_vars)
 
 categories_vehicle_type = ["car", "motorbike", "boat", "bicycle"]
@@ -156,6 +166,55 @@ def recat_buss_owner(x):
         return "Self"
     else:
         return "Other"
-
-
 raw["BI_Business_Owner"] = raw["BI_Business_Owner"].apply(recat_buss_owner)
+
+categories = ["A", "B", "C"]
+raw["FI_Education"] = raw["FI_Education"].cat.reorder_categories(
+    categories, ordered=True
+)
+
+
+# ------------------------------
+# 2. Portfolio Analysis
+# ------------------------------
+
+# 1 Portfolio overview
+# Create age at day application column
+raw["GI_Age_at_app_date"] = (raw["GI_Application_Date"] - raw["GI_DOB"]).dt.days // 365
+
+# date of application by year and month
+raw["GI_Application_YYYYMM"] = raw["GI_Application_Date"].dt.to_period("M")
+
+GI_list = ["GI_Application_YYYYMM", "GI_Age_at_app_date"]
+BI_list = ["BI_Biz_Main_Type", "BI_Length_of_Business", "OL_Outstanding_Loan"]
+FC_list = ["FC_Total_Cash_Income", "FC_Total_Business_Expense", "FC_Net_Income.FO."]
+DL_list = raw.filter(regex="DL").columns.tolist()
+
+func.feature_plot(raw, GI_list, "GI.png")
+func.feature_plot(raw, BI_list, "BI.png")
+func.feature_plot(raw, FC_list, "FC.png")
+func.feature_plot(raw, DL_list, "DL.png")
+
+# 2. Exclusions
+policy_age = (raw["GI_Age_at_app_date"] >= 18) & (raw["GI_Age_at_app_date"] <= 60)
+app_date_no_missing = ~raw["GI_Application_Date"].isna()
+non_duplicate_records = ~raw["GI_Client_ID"].duplicated(keep=False)
+# Getting index of accounts that satisfy the conditions
+policy_age_index = raw[policy_age].index
+app_date_missing_index = raw[app_date_no_missing].index
+duplicate_records_index = raw[non_duplicate_records | raw["GI_Client_ID"].isna()].index
+# Filter the dataset to get the accounts that satisfy all the conditions
+good_index = list(
+    set(duplicate_records_index) & set(policy_age_index) & set(app_date_missing_index)
+)
+
+raw_filter = raw.filter(items=good_index, axis=0)
+
+os.mkdir("data\prepared")
+
+raw_filter.to_csv("data\prepared\Data_cleaned_filtered.csv", index=False)
+# There useless categories as a result of exceptions that will be removed after the GB tagging in the following stage. In that stage we will filter only good and bad borrowers, excluding undefined ones.
+
+dtypes_dict = {raw_filter[column].name: raw_filter[column].dtype.name for column in raw_filter.columns}
+with open('data\prepared\dtypes_dict.pkl', 'wb') as fp:
+    pickle.dump(dtypes_dict, fp)
