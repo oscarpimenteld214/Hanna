@@ -157,9 +157,6 @@ useless_vars += [
 ]
 raw = raw.drop(columns=useless_vars)
 
-categories_vehicle_type = ["car", "motorbike", "boat", "bicycle"]
-
-
 def recat_buss_owner(x):
     self_buss = ["Self", "Seelf", "S"]
     if x in self_buss:
@@ -173,27 +170,21 @@ raw["FI_Education"] = raw["FI_Education"].cat.reorder_categories(
     categories, ordered=True
 )
 
-
-# ------------------------------
-# 2. Portfolio Analysis
-# ------------------------------
-
-# 1 Portfolio overview
 # Create age at day application column
 raw["GI_Age_at_app_date"] = (raw["GI_Application_Date"] - raw["GI_DOB"]).dt.days // 365
 
 # date of application by year and month
 raw["GI_Application_YYYYMM"] = raw["GI_Application_Date"].dt.to_period("M")
 
-GI_list = ["GI_Application_YYYYMM", "GI_Age_at_app_date"]
-BI_list = ["BI_Biz_Main_Type", "BI_Length_of_Business", "OL_Outstanding_Loan"]
-FC_list = ["FC_Total_Cash_Income", "FC_Total_Business_Expense", "FC_Net_Income.FO."]
-DL_list = raw.filter(regex="DL").columns.tolist()
+#GI_list = ["GI_Application_YYYYMM", "GI_Age_at_app_date"]
+#BI_list = ["BI_Biz_Main_Type", "BI_Length_of_Business", "OL_Outstanding_Loan"]
+#FC_list = ["FC_Total_Cash_Income", "FC_Total_Business_Expense", "FC_Net_Income.FO."]
+#DL_list = raw.filter(regex="DL").columns.tolist()
 
-func.feature_plot(raw, GI_list, "GI.png")
-func.feature_plot(raw, BI_list, "BI.png")
-func.feature_plot(raw, FC_list, "FC.png")
-func.feature_plot(raw, DL_list, "DL.png")
+#func.feature_plot(raw, GI_list, "GI.png")
+#func.feature_plot(raw, BI_list, "BI.png")
+#func.feature_plot(raw, FC_list, "FC.png")
+#func.feature_plot(raw, DL_list, "DL.png")
 
 # 2. Exclusions
 policy_age = (raw["GI_Age_at_app_date"] >= 18) & (raw["GI_Age_at_app_date"] <= 60)

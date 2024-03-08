@@ -16,3 +16,14 @@ stages:
     - .\src\portfolio.py
     outs:
     - .\data\portfolio
+  univariate:
+    cmd: python .\src\univariate.py .\data\portfolio\Train.csv .\data\portfolio\Test.csv
+      .\data\prepared\dtypes_dict.pkl
+    deps:
+    - .\data\portfolio\Test.csv
+    - .\data\portfolio\Train.csv
+    - .\data\prepared\dtypes_dict.pkl
+    - .\src\functions.py
+    - .\src\univariate.py
+    outs:
+    - .\data\univariate

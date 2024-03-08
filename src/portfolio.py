@@ -68,16 +68,17 @@ raw_filter = raw_filter.drop(columns=["DL_x_Times_Late", "DL_1st_Late_Term"])
 
 
 # 4. Variable Generation
-# In the new variable V3_App_State_eq_NRC_State, 0 means false and 1 means true
-#raw_filter["R5_House_Value_to_Req_Loan_Amt"] = (
-#    raw_filter["FC_House_Value"] / raw_filter["PL_Requested_Loan_Amount"]
-#)
-#raw_filter["R8_Farm_Value_to_Farm_Size"] = (
-#    raw_filter["FC_Farm_Value"] / raw_filter["FC_Farm_Size"]
-#)
+
+raw_filter["R5_House_Value_to_Req_Loan_Amt"] = (
+    raw_filter["FC_House_Value"] / raw_filter["PL_Requested_Loan_Amount"]
+)
+raw_filter["R8_Farm_Value_to_Farm_Size"] = (
+    raw_filter["FC_Farm_Value"] / raw_filter["FC_Farm_Size"]
+)
 raw_filter["FC_House_area_ftsquare"] = (
     raw_filter["FC_House_width.ft."] * raw_filter["FC_House_length.ft."]
 )
+
 raw_filter['FC_Income_Expense_Ratio'] = raw_filter['FC_Total_Cash_Income'] / (raw_filter['FC_Total_Business_Expense'] + raw_filter['FC_Total_Personal_Expense'])
 raw_filter['FC_Income_Expense_Ratio'] = raw_filter['FC_Income_Expense_Ratio'].replace({np.inf: np.nan})
 
@@ -90,6 +91,17 @@ for variable in raw_filter.columns:
         raw_filter[variable] = raw_filter[variable].cat.remove_unused_categories()
     except:
         pass
+
+# 5. Missing analysis
+# Variables with more than 80% missing values
+vars_high_missing = (
+    (100 * raw_filter.isna().sum() / raw_filter.shape[0])
+    .sort_values(ascending=False)
+    .loc[lambda x: x > 80]
+    .index.to_list()
+)
+# Remove previous variables from the dataset to check performance of the model
+raw_filter = raw_filter.drop(columns=vars_high_missing)
 
 # 6. Sample Selection
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=1234)

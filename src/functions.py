@@ -2,6 +2,7 @@ from typing import Tuple, List
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 
 def feature_plot(data: pd.DataFrame, features: List, file_path: str) -> None:
     """Plot the distribution of the features in the dataset.
@@ -37,7 +38,6 @@ def feature_plot(data: pd.DataFrame, features: List, file_path: str) -> None:
     plt.savefig(file_path, bbox_inches="tight")
     plt.close()
 
-# Computing the WOE and IV tables to select variables
 def woe_iv(
     df: pd.DataFrame, target: str, bins: int = 10, event_ident: int = 0
 ) -> Tuple[pd.DataFrame, pd.Series]:
@@ -72,9 +72,10 @@ def woe_iv(
         df_filter = df.reset_index()[[variable, target, "index"]]
 
         if var_dtype not in ["object", "category", "interval", "period[M]"]:
-            df_filter[variable] = pd.qcut(df_filter[variable], bins, duplicates="drop")
+            print(variable)
+            df_filter[variable] = pd.qcut(df_filter[variable], q=bins, duplicates="drop")
 
-        woe = df_filter.groupby(by=[variable, target], as_index=False, observed=True).count()
+        woe = df_filter.groupby(by=[variable, target], as_index=False).count()
         woe = woe.pivot(index=variable, columns=target, values="index")
         woe.columns.name = None
         woe = woe.reset_index()
@@ -97,7 +98,7 @@ def woe_iv(
     iv_df = woe_df.groupby("Variable").IV.sum().sort_values(ascending=False)
     return woe_df, iv_df
 
-def woe_plot(woe_table: pd.DataFrame, var_toplot: str) -> None:
+def woe_plot(woe_table: pd.DataFrame, var_toplot: str, path: str) -> None:
     """Get the weight of evidence plot for each variable
 
     Args:
@@ -105,6 +106,7 @@ def woe_plot(woe_table: pd.DataFrame, var_toplot: str) -> None:
         'Variable', the categories or bins in the column 'Categories', and WoE values in
         the column 'WoE'.
         var_toplot (str): It is the variable for which the plot is obtained
+        path (str): Path to save the plot
     """
     woe_variable = woe_table[woe_table["Variable"] == var_toplot]
     x = [str(i) for i in woe_variable["Categories"].values]
@@ -115,6 +117,67 @@ def woe_plot(woe_table: pd.DataFrame, var_toplot: str) -> None:
     plt.bar(x, y, width=0.5)
     plt.xlabel(var_toplot)
     plt.ylabel("WoE")
-    save_path = "images/univariate_analysis/" + str(var_toplot) + "_woe.png"
+    save_path = path + var_toplot + "_woe.png"
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()
+
+def coerse_classing(
+    serie: pd.Series, left_bounds: list[float], right_bounds: list[float]
+) -> pd.Series:
+    # Create groups
+    groups = []
+    classif_list = []
+    for left, right in zip(left_bounds, right_bounds):
+        if left == right:
+            groups.append(left)
+            continue
+        groups.append(pd.Interval(left=left, right=right))
+    # Iterate over pandas series
+    for value in serie.values:
+        if np.isnan(value):
+            classif_list.append(np.nan)
+            continue
+        # Iterate over groups to select the group for each value
+        for group in groups:            
+            if type(group) == float:
+                if value == group:
+                    classif_list.append(str(group))
+                continue
+            if value in group:
+                classif_list.append(str(group))
+                continue
+    final_series = pd.Series(classif_list, index=serie.index)
+    categories = [str(cat) for cat in groups]
+    return final_series.astype(CategoricalDtype(categories=categories, ordered=True))
+
+def coerse_classing_results(
+    data: pd.DataFrame,
+    variable: str,
+    left_bounds: list[float],
+    right_bounds: list[float],
+    target: str,
+    path: str,
+) -> None:
+    """Performs coarse classing, computes the WoE table, and plots the WoE for the variable.
+
+    Args:
+        data (pd.DataFrame): Dataframe
+        variable (str): Name of the variable to be coerced
+        left_bounds (list): List of left bounds for the groups
+        right_bounds (list): List of right bounds for the groups
+        target (str): Name of the target variable
+    """
+    coerse_var = coerse_classing(data[variable], left_bounds, right_bounds)
+
+    # Create the DataFrame with the new variable and the target to compute the WoE table
+    df_VarTest_dict = {
+        variable: coerse_var,
+        target: data[target],
+    }
+    df_VarTest = pd.DataFrame(data=df_VarTest_dict)
+    woe_test, _ = woe_iv(df_VarTest, target)
+    path_tosave = path + "woe_" + variable + ".csv"
+    woe_test.to_csv(path_tosave)
+
+    # Plot the WoE for the specific variable
+    woe_plot(woe_test, variable, path)
