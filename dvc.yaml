@@ -16,9 +16,9 @@ stages:
     - .\src\portfolio.py
     outs:
     - .\data\portfolio
+
   univariate:
     cmd: python .\src\univariate.py .\data\portfolio\Train.csv .\data\portfolio\Test.csv
-      .\data\prepared\dtypes_dict.pkl
     deps:
     - .\data\portfolio\Test.csv
     - .\data\portfolio\Train.csv
@@ -27,3 +27,14 @@ stages:
     - .\src\univariate.py
     outs:
     - .\data\univariate
+  modeling:
+    cmd: python .\src\modeling.py .\data\univariate\Train.csv .\data\univariate\Test.csv
+    deps:
+    - .\data\univariate\Test.csv
+    - .\data\univariate\Train.csv
+    - .\data\univariate\dtypes_dict.pkl
+    - .\data\univariate\x_shortlisted.pkl
+    - .\src\functions.py
+    - .\src\modeling.py
+    outs:
+    - .\data\modeling\

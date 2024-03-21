@@ -1,18 +1,7 @@
 # 0. Libraries
-from typing import Tuple, List
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import pandas as pd
 from pandas.api.types import CategoricalDtype
-import seaborn as sns
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
-from scipy.stats import ks_2samp, norm
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-import xgboost as xgb
 import pickle
 import os
 
@@ -145,7 +134,9 @@ useless_vars = [
     "GI_NRC_Town",
     "BI_Biz_Sub_type",
     "SVI_OwnerName",
-    "GI_Client_Name",
+    "GI_Client_Name", 
+    "DL_Actual_Disbursed_Amt", 
+    "DL_Total_Terms",
 ]
 # Variables with few accounts, such that in some categories we don't have bad accounts. This lead to a inf information value. We will remove these variables from the dataset
 useless_vars += [
@@ -175,16 +166,6 @@ raw["GI_Age_at_app_date"] = (raw["GI_Application_Date"] - raw["GI_DOB"]).dt.days
 
 # date of application by year and month
 raw["GI_Application_YYYYMM"] = raw["GI_Application_Date"].dt.to_period("M")
-
-#GI_list = ["GI_Application_YYYYMM", "GI_Age_at_app_date"]
-#BI_list = ["BI_Biz_Main_Type", "BI_Length_of_Business", "OL_Outstanding_Loan"]
-#FC_list = ["FC_Total_Cash_Income", "FC_Total_Business_Expense", "FC_Net_Income.FO."]
-#DL_list = raw.filter(regex="DL").columns.tolist()
-
-#func.feature_plot(raw, GI_list, "GI.png")
-#func.feature_plot(raw, BI_list, "BI.png")
-#func.feature_plot(raw, FC_list, "FC.png")
-#func.feature_plot(raw, DL_list, "DL.png")
 
 # 2. Exclusions
 policy_age = (raw["GI_Age_at_app_date"] >= 18) & (raw["GI_Age_at_app_date"] <= 60)

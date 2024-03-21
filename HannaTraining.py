@@ -24,7 +24,7 @@ pd.set_option("mode.copy_on_write", False)
 # ------------------------------
 
 # load data
-raw = pd.read_csv("Day1/raw.csv", encoding="latin")
+raw = pd.read_csv("data/raw.csv", encoding="latin")
 raw = raw.drop(columns=["Unnamed: 0"])
 raw = raw.replace({"-": np.nan, "- ": np.nan, " -": np.nan, " - ": np.nan})
 
@@ -160,7 +160,6 @@ def recat_buss_owner(x):
 
 raw["BI_Business_Owner"] = raw["BI_Business_Owner"].apply(recat_buss_owner)
 
-
 # ------------------------------
 # 2. Portfolio Analysis
 # ------------------------------
@@ -246,16 +245,15 @@ for variable in raw_filter.columns:
     except:
         pass
 
-# 5. Missing analysis
 # Variables with more than 80% missing values
 vars_high_missing = (
-    (100 * raw_filter.isna().sum() / raw_filter.shape[0])
+    (100 * raw.isna().sum() / raw.shape[0])
     .sort_values(ascending=False)
     .loc[lambda x: x > 80]
     .index.to_list()
 )
 # Remove previous variables from the dataset to check performance of the model
-raw_filter = raw_filter.drop(columns=vars_high_missing)
+raw = raw.drop(columns=vars_high_missing)
 
 # 6. Sample Selection
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=1234)

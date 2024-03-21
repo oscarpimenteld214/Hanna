@@ -2,7 +2,6 @@
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 import os
-import pickle
 import numpy as np
 
 import functions as func
@@ -14,23 +13,19 @@ pd.set_option("mode.copy_on_write", False)
 # 2. Portfolio Analysis
 # ------------------------------
 
-# load data from prepare stage
-with open('data\prepared\dtypes_dict.pkl', 'rb') as fp:
-    dtypes_dict = pickle.load(fp)
-date_dtypes = ["datetime64[ns]", "datetime64", "datetime"]
-parse_dates = []
-for key, value in dtypes_dict.items():
-    if value in date_dtypes:
-        dtypes_dict[key] = "object"
-        parse_dates.append(key)
-
-raw_filter = pd.read_csv("data/prepared/Data_cleaned_filtered.csv", dtype=dtypes_dict, parse_dates=parse_dates, encoding="latin")
+in_path = "data/prepared/"
+out_path = "data/portfolio/"
 
 # Create output folder
-os.mkdir("data\portfolio")
+os.mkdir(out_path)
+
+# load data from prepare stage
+raw_filter = func.get_data(
+    in_path + "Data_cleaned_filtered.csv", in_path + "dtypes_dict.pkl"
+)
 
 # 1 Portfolio overview
-#"GI_Application_YYYYMM", 
+# "GI_Application_YYYYMM",
 GI_list = ["GI_Application_YYYYMM", "GI_Age_at_app_date"]
 BI_list = ["BI_Biz_Main_Type", "BI_Length_of_Business", "OL_Outstanding_Loan"]
 FC_list = ["FC_Total_Cash_Income", "FC_Total_Business_Expense", "FC_Net_Income.FO."]
@@ -66,6 +61,15 @@ raw_filter["GB"] = raw_filter.apply(GB_tag, axis=1)
 raw_filter = raw_filter.drop(columns=["DL_Total_Late_Day", "MOB"])
 raw_filter = raw_filter.drop(columns=["DL_x_Times_Late", "DL_1st_Late_Term"])
 
+# 6. Outliers analysis
+# Remove outliers of features related to income and expense
+vars_with_income_expense = raw_filter.loc[
+    :, raw_filter.columns.str.contains("Income|Expense", regex=True)
+].columns.to_list()
+raw_filter = func.remove_outliers(raw_filter, vars_with_income_expense, 2.8) # 2.8
+func.feature_plot(raw_filter, FC_list, "data\portfolio\FinancialCond.png")
+
+
 
 # 4. Variable Generation
 
@@ -79,8 +83,12 @@ raw_filter["FC_House_area_ftsquare"] = (
     raw_filter["FC_House_width.ft."] * raw_filter["FC_House_length.ft."]
 )
 
-raw_filter['FC_Income_Expense_Ratio'] = raw_filter['FC_Total_Cash_Income'] / (raw_filter['FC_Total_Business_Expense'] + raw_filter['FC_Total_Personal_Expense'])
-raw_filter['FC_Income_Expense_Ratio'] = raw_filter['FC_Income_Expense_Ratio'].replace({np.inf: np.nan})
+raw_filter["FC_Income_Expense_Ratio"] = raw_filter["FC_Total_Cash_Income"] / (
+    raw_filter["FC_Total_Business_Expense"] + raw_filter["FC_Total_Personal_Expense"]
+)
+raw_filter["FC_Income_Expense_Ratio"] = raw_filter["FC_Income_Expense_Ratio"].replace(
+    {np.inf: np.nan}
+)
 
 raw_filter = raw_filter[raw_filter["GB"] != -1].reset_index()
 raw_filter = raw_filter.drop(columns="index")
@@ -103,11 +111,16 @@ vars_high_missing = (
 # Remove previous variables from the dataset to check performance of the model
 raw_filter = raw_filter.drop(columns=vars_high_missing)
 
-# 6. Sample Selection
+
+# 7. Sample Selection
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=1234)
 for train_index, test_index in split.split(raw_filter, raw_filter["GB"]):
     train = raw_filter.loc[train_index]
     test = raw_filter.loc[test_index]
 
+# Save data
 train.to_csv("data\portfolio\Train.csv", index=False)
 test.to_csv("data\portfolio\Test.csv", index=False)
+
+# Copy dtypes_dict.pkl to the new folder
+os.system("copy data\prepared\dtypes_dict.pkl data\portfolio\dtypes_dict.pkl")

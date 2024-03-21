@@ -3,6 +3,87 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pandas.api.types import CategoricalDtype
+from sklearn.metrics import roc_auc_score
+from scipy import stats
+import pickle
+
+
+def get_data(data_file: str, dtypes_file: str) -> pd.DataFrame:
+    """Load the data from a csv file and set the correct data types.
+
+    Args:
+        data_file (str): File path to the data
+        dtypes_file (str): File path to the dictionary with the data types
+
+    Returns:
+        pd.DataFrame: Dataframe with the data
+    """
+    with open(dtypes_file, "rb") as fp:
+        dtypes_dict = pickle.load(fp)
+    date_dtypes = ["datetime64[ns]", "datetime64", "datetime"]
+    parse_dates = []
+    for key, value in dtypes_dict.items():
+        if value in date_dtypes:
+            dtypes_dict[key] = "object"
+            parse_dates.append(key)
+    data = pd.read_csv(
+        data_file, dtype=dtypes_dict, parse_dates=parse_dates, encoding="latin"
+    )
+    return data
+
+
+def prepare_for_modeling(
+    train: pd.DataFrame, test: pd.DataFrame, variables: list[str], target: str
+) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+    """Prepare the train, test sets to use in the scikit-learn objects
+
+    Args:
+        train (pd.DataFrame): Train dataset
+        test (pd.DataFrame): Test dataset
+        variables (list[str]): Variables to use in the model
+        target (str): Variable to predict
+
+    Returns:
+        Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]: Variables and targets of the train and test sets
+    """
+    X_train = train[variables]
+    X_test = test[variables]
+    for var in variables:
+        if X_train[var].dtype.name == "object":
+            X_train.loc[:, var] = X_train[var].astype("category")
+            X_test.loc[:, var] = X_test[var].astype("category")
+    y_train = train[target]
+    y_test = test[target]
+
+    if target in X_train.columns:
+        X_train = X_train.drop(columns=target)
+        X_test = X_test.drop(columns=target)
+
+    # Convert columns to dummy variables
+    X_train = pd.get_dummies(X_train, drop_first=True, dtype=float)
+    X_test = pd.get_dummies(X_test, drop_first=True, dtype=float)
+    return X_train, y_train, X_test, y_test
+
+
+def remove_outliers(
+    data: pd.DataFrame, variables: List[str], threshold: float
+) -> pd.DataFrame:
+    """Remove outliers from the series
+
+    Args:
+        data (pd.DataFrame): Dataframe
+        variables (List[str]): Variables to remove outliers
+        threshold (float): Threshold to remove outliers
+
+    Returns:
+        pd.DataFrame: Dataframe without outliers
+    """
+    z_scores = np.abs(stats.zscore(data[variables], nan_policy="omit"))
+    condition1 = z_scores < threshold
+    condition2 = np.isnan(z_scores)
+    data = data[(condition1 | condition2).all(axis=1)]
+    return data.reset_index(drop=True)
+
 
 def feature_plot(data: pd.DataFrame, features: List, file_path: str) -> None:
     """Plot the distribution of the features in the dataset.
@@ -38,6 +119,7 @@ def feature_plot(data: pd.DataFrame, features: List, file_path: str) -> None:
     plt.savefig(file_path, bbox_inches="tight")
     plt.close()
 
+
 def woe_iv(
     df: pd.DataFrame, target: str, bins: int = 10, event_ident: int = 0
 ) -> Tuple[pd.DataFrame, pd.Series]:
@@ -72,10 +154,13 @@ def woe_iv(
         df_filter = df.reset_index()[[variable, target, "index"]]
 
         if var_dtype not in ["object", "category", "interval", "period[M]"]:
-            print(variable)
-            df_filter[variable] = pd.qcut(df_filter[variable], q=bins, duplicates="drop")
+            df_filter[variable] = pd.qcut(
+                df_filter[variable], q=bins, duplicates="drop"
+            )
 
-        woe = df_filter.groupby(by=[variable, target], as_index=False).count()
+        woe = df_filter.groupby(
+            by=[variable, target], as_index=False, observed=False
+        ).count()
         woe = woe.pivot(index=variable, columns=target, values="index")
         woe.columns.name = None
         woe = woe.reset_index()
@@ -97,6 +182,7 @@ def woe_iv(
         woe_df = pd.concat([woe_df, woe], ignore_index=True)
     iv_df = woe_df.groupby("Variable").IV.sum().sort_values(ascending=False)
     return woe_df, iv_df
+
 
 def woe_plot(woe_table: pd.DataFrame, var_toplot: str, path: str) -> None:
     """Get the weight of evidence plot for each variable
@@ -121,6 +207,7 @@ def woe_plot(woe_table: pd.DataFrame, var_toplot: str, path: str) -> None:
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()
 
+
 def coerse_classing(
     serie: pd.Series, left_bounds: list[float], right_bounds: list[float]
 ) -> pd.Series:
@@ -138,7 +225,7 @@ def coerse_classing(
             classif_list.append(np.nan)
             continue
         # Iterate over groups to select the group for each value
-        for group in groups:            
+        for group in groups:
             if type(group) == float:
                 if value == group:
                     classif_list.append(str(group))
@@ -149,6 +236,7 @@ def coerse_classing(
     final_series = pd.Series(classif_list, index=serie.index)
     categories = [str(cat) for cat in groups]
     return final_series.astype(CategoricalDtype(categories=categories, ordered=True))
+
 
 def coerse_classing_results(
     data: pd.DataFrame,
@@ -181,3 +269,168 @@ def coerse_classing_results(
 
     # Plot the WoE for the specific variable
     woe_plot(woe_test, variable, path)
+
+
+def auroc(X: pd.DataFrame, y: pd.Series, model: object, dataset: str) -> str:
+    """Compute the AUROC for a model
+
+    Args:
+        X (pd.DataFrame): Variables
+        y (pd.Series): Target
+        model (object): Model object
+
+    Returns:
+        str: AUROC value in a string format
+    """
+    y_prob = model.predict_proba(X)[:, 1]
+    AUROC = np.round(roc_auc_score(y, y_prob) * 100, 2)
+    return f"- AUROC in the {dataset} set: {AUROC} %"
+
+
+def score_scale(
+    estimates: np.ndarray, ref_odds: int, ref_score: int, pdo: int, beta_0: float
+) -> List[float]:
+    """
+    Creates the scores by scaling the log(odds), which is the output of the
+    logistic regression. It uses a linear tranformation to convert each
+    estimate (beta) to a score.
+
+    Args:
+        estimates (List[floats]): Parameters from logistic regression.
+        ref_odds (int): The odds the client want to have at the reference score.
+        ref_score (int): The score the client wants to have at the reference odds.
+        pdo (int): The points that increments the score when the odds doubles.
+        beta_0 (float): Intercept of the logistic regression.
+
+    Returns:
+        scores (List[floats]): The scores for each parameter.
+    """
+    factor = pdo / np.log(2)
+    offset = ref_score - factor * np.log(ref_odds)
+    n = len(estimates)
+    scores = [-round(float(beta * factor)) for beta in estimates]
+    score_intercept = offset - factor * beta_0
+    scores.append(round(float(score_intercept)))
+    return scores
+
+
+def get_scores_table(
+    data_filtered: pd.DataFrame, model: object, ref_odds: int, ref_score: int, pdo: int
+) -> pd.DataFrame:
+    scores_table = pd.DataFrame()
+
+    def var_cats(x: str, var_names: List[str], result: str) -> str:
+        """Takes the variable name from logistic regression in the format 'varname_category', adn extract the variable name or the category depending on the result parameter.
+
+        Args:
+            x (str): variable name from logistic regression
+            var_names (List[str]): variables used in to train the logistic regression model
+            result (str): 'variable' or 'category' to be extracted from the variable name
+
+        Returns:
+            str: the variable or the category
+        """
+        for var in var_names:
+            if var in x:
+                if result == "variable":
+                    return var
+                else:
+                    return x.replace(var + "_", "")
+            else:
+                continue
+
+    var_list = data_filtered.columns.to_list()
+    X_train_withfirst = pd.get_dummies(data_filtered, drop_first=False)
+    scores_table["Varname"] = X_train_withfirst.columns.values
+    # Extract the variable name
+    scores_table["Variable"] = scores_table["Varname"].apply(
+        var_cats,
+        args=(
+            var_list,
+            "variable",
+        ),
+    )
+    # Extract the category name
+    scores_table["Category"] = scores_table["Varname"].apply(
+        var_cats,
+        args=(
+            var_list,
+            "category",
+        ),
+    )
+    # Estimates (coefficients)
+    params = model.coef_[0]
+    features = model.feature_names_in_
+    par_dict = {feature: par for feature, par in zip(features, params)}
+    scores_table["Estimates"] = scores_table["Varname"].replace(par_dict)
+    scores_table["Estimates"] = scores_table["Estimates"].replace(
+        to_replace=r"_", value=0, regex=True
+    )
+
+    estimates_tot = scores_table["Estimates"].values
+    score_scales = score_scale(
+        estimates_tot, ref_odds, ref_score, pdo, model.intercept_
+    )
+
+    # drop the 'varname' column
+    scores_table = scores_table.drop(columns=["Varname"])
+
+    # Add a new row for the intercept
+    scores_table.loc[len(scores_table)] = [
+        "Intercept",
+        "Intercept",
+        float(model.intercept_),
+    ]
+
+    # Add a new column with the new_scale and name it score
+    scores_table["Score"] = score_scales
+    return scores_table
+
+def get_scores_distribution(X: pd.DataFrame, y: pd.Series, score_table: pd.DataFrame, bins: int, path: str) -> pd.DataFrame:
+    """Get the scores distribution plot and table
+
+    Args:
+        X (pd.DataFrame): Dataframe with the filtered data
+        y (pd.Series): Target variable
+        score_table (pd.DataFrame): Dataframe with the scores
+        bins (int): Number of bins to use in the bar plot
+        path (str): Path to save the plot
+
+    Returns:
+        pd.DataFrame: Dataframe with the distribution of the scores
+    """
+    X_train_withfirst = pd.get_dummies(X, drop_first=False)
+    X_train_withfirst["Intercept"] = 1
+
+    X_train_scores = (X_train_withfirst * score_table["Score"].values).sum(axis=1)
+
+    # Segment X_train_scores into the given number of bins
+    scorebands = pd.cut(X_train_scores, bins)
+    bins_dict = {cat: i for cat, i in zip(scorebands.cat.categories, range(1, bins + 1))}
+    scorebands = scorebands.replace(bins_dict).cat.set_categories(
+        [i for i in range(1, bins + 1)], ordered=True
+    )
+
+    # Create a bar plot
+    plt.figure(figsize=(10, 6))
+    scorebands.value_counts(normalize=True).sort_index().plot.bar()
+    plt.xlabel("Score Bins")
+    plt.ylabel("Count")
+    plt.title("Distribution of Scores")
+
+    # Create line plot with the bad rate
+    score_bad_rate = pd.DataFrame(scorebands, columns=["Score_bins"])
+    score_bad_rate["GB_predict"] = y
+    tot_perband = scorebands.value_counts().sort_index()
+    tot_bads = (
+        score_bad_rate[score_bad_rate["GB_predict"] == 1]["Score_bins"]
+        .value_counts()
+        .sort_index()
+    )
+    bad_rate = tot_bads / tot_perband
+    print(bad_rate)
+    bad_rate.plot.line(color="red", marker="o", linewidth=3, label="Bad Rate")
+    plt.legend()
+
+    plt.savefig(path, bbox_inches="tight")
+    plt.close()

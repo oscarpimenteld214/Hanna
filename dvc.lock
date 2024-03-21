@@ -9,66 +9,98 @@ stages:
       size: 808860
     - path: .\src\prepare.py
       hash: md5
-      md5: 9af52da5e28e5b4cab26a6bcc5c34393
-      size: 6841
+      md5: 9302981eeef63de6213aa8bd3b691880
+      size: 5983
     outs:
     - path: .\data\prepared
       hash: md5
-      md5: cedde05eef5ed83772b403829c9ac152.dir
-      size: 530797
+      md5: e6220da471743a44adb25404ed81aa1a.dir
+      size: 501018
       nfiles: 2
   portfolio:
     cmd: python .\src\portfolio.py .\data\prepared\Data_cleaned_filtered.csv .data\prepared\dtypes_dict.pkl
     deps:
     - path: .\data\prepared\Data_cleaned_filtered.csv
       hash: md5
-      md5: c15f1ce7a3ffda178d182e8f694d0525
-      size: 529229
+      md5: 5325bdde055e1d731999975f327797aa
+      size: 499513
     - path: .\data\prepared\dtypes_dict.pkl
       hash: md5
-      md5: 0c536563e34368a8c4d4d7acd755d284
-      size: 1568
+      md5: e64dd72e69b3544f997dabb0fc5e783b
+      size: 1505
     - path: .\src\functions.py
       hash: md5
-      md5: 0d593304c5e44412ddb8c15858f9f4f4
-      size: 7002
+      md5: 3d8a2e930f0a483948a1131bd62b481d
+      size: 16045
     - path: .\src\portfolio.py
       hash: md5
-      md5: d04d089fd724eb4f4ad7d216690765d6
-      size: 4055
+      md5: fbd0baf951e694531a91d5f011d09850
+      size: 4294
     outs:
     - path: .\data\portfolio
       hash: md5
-      md5: 8d2b6767e7e87c3ecdd13637b820d64e.dir
-      size: 605877
-      nfiles: 6
+      md5: dafecb76db26e200023b8a6e5aed8e00.dir
+      size: 545987
+      nfiles: 7
   univariate:
     cmd: python .\src\univariate.py .\data\portfolio\Train.csv .\data\portfolio\Test.csv
-      .\data\prepared\dtypes_dict.pkl
     deps:
     - path: .\data\portfolio\Test.csv
       hash: md5
-      md5: dece80ea4e42d762106187881203acd5
-      size: 83068
+      md5: dde2fd9d673dfd934ad353192fc6f367
+      size: 75678
     - path: .\data\portfolio\Train.csv
       hash: md5
-      md5: 71b4ec3bb49af5ea3316e7836b5cf497
-      size: 328568
+      md5: 0ca587ffc1262619eb5f8dcc992849fb
+      size: 300355
     - path: .\data\prepared\dtypes_dict.pkl
       hash: md5
-      md5: 0c536563e34368a8c4d4d7acd755d284
-      size: 1568
+      md5: e64dd72e69b3544f997dabb0fc5e783b
+      size: 1505
     - path: .\src\functions.py
       hash: md5
-      md5: 0d593304c5e44412ddb8c15858f9f4f4
-      size: 7002
+      md5: 3d8a2e930f0a483948a1131bd62b481d
+      size: 16045
     - path: .\src\univariate.py
       hash: md5
-      md5: c3805f58e988798b229487b6543a2445
-      size: 6669
+      md5: 34ebe3cc8c44fdfd42c141b4a5d0a6c4
+      size: 6186
     outs:
     - path: .\data\univariate
       hash: md5
-      md5: d86df834c6f9dc4b7e5bf4ab80287439.dir
-      size: 1626222
-      nfiles: 33
+      md5: 9d42446fe6c02032cafd628406ade8ce.dir
+      size: 1464469
+      nfiles: 35
+  modeling:
+    cmd: python .\src\modeling.py .\data\univariate\Train.csv .\data\univariate\Test.csv
+    deps:
+    - path: .\data\univariate\Test.csv
+      hash: md5
+      md5: cabb82998bc7f514658763629feb1951
+      size: 111629
+    - path: .\data\univariate\Train.csv
+      hash: md5
+      md5: 569d2ac1ee7ee69a41e54e0f04c7065c
+      size: 443822
+    - path: .\data\univariate\dtypes_dict.pkl
+      hash: md5
+      md5: e64dd72e69b3544f997dabb0fc5e783b
+      size: 1505
+    - path: .\data\univariate\x_shortlisted.pkl
+      hash: md5
+      md5: aa7f878143b917210398cc7150bd4ebf
+      size: 222
+    - path: .\src\functions.py
+      hash: md5
+      md5: 3d8a2e930f0a483948a1131bd62b481d
+      size: 16045
+    - path: .\src\modeling.py
+      hash: md5
+      md5: 28080fd0eeaaf15d37757951ad748009
+      size: 5204
+    outs:
+    - path: .\data\modeling\
+      hash: md5
+      md5: 447fb9f19eec141fd660c6c42bec87fc.dir
+      size: 32210
+      nfiles: 3
