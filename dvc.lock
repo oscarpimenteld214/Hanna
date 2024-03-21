@@ -1,0 +1,74 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python .\src\prepare.py data\raw.csv
+    deps:
+    - path: .\data\raw.csv
+      hash: md5
+      md5: f28ad4abfc14840a858bd78f8c0e3a23
+      size: 808860
+    - path: .\src\prepare.py
+      hash: md5
+      md5: 9af52da5e28e5b4cab26a6bcc5c34393
+      size: 6841
+    outs:
+    - path: .\data\prepared
+      hash: md5
+      md5: cedde05eef5ed83772b403829c9ac152.dir
+      size: 530797
+      nfiles: 2
+  portfolio:
+    cmd: python .\src\portfolio.py .\data\prepared\Data_cleaned_filtered.csv .data\prepared\dtypes_dict.pkl
+    deps:
+    - path: .\data\prepared\Data_cleaned_filtered.csv
+      hash: md5
+      md5: c15f1ce7a3ffda178d182e8f694d0525
+      size: 529229
+    - path: .\data\prepared\dtypes_dict.pkl
+      hash: md5
+      md5: 0c536563e34368a8c4d4d7acd755d284
+      size: 1568
+    - path: .\src\functions.py
+      hash: md5
+      md5: 0d593304c5e44412ddb8c15858f9f4f4
+      size: 7002
+    - path: .\src\portfolio.py
+      hash: md5
+      md5: d04d089fd724eb4f4ad7d216690765d6
+      size: 4055
+    outs:
+    - path: .\data\portfolio
+      hash: md5
+      md5: 8d2b6767e7e87c3ecdd13637b820d64e.dir
+      size: 605877
+      nfiles: 6
+  univariate:
+    cmd: python .\src\univariate.py .\data\portfolio\Train.csv .\data\portfolio\Test.csv
+      .\data\prepared\dtypes_dict.pkl
+    deps:
+    - path: .\data\portfolio\Test.csv
+      hash: md5
+      md5: dece80ea4e42d762106187881203acd5
+      size: 83068
+    - path: .\data\portfolio\Train.csv
+      hash: md5
+      md5: 71b4ec3bb49af5ea3316e7836b5cf497
+      size: 328568
+    - path: .\data\prepared\dtypes_dict.pkl
+      hash: md5
+      md5: 0c536563e34368a8c4d4d7acd755d284
+      size: 1568
+    - path: .\src\functions.py
+      hash: md5
+      md5: 0d593304c5e44412ddb8c15858f9f4f4
+      size: 7002
+    - path: .\src\univariate.py
+      hash: md5
+      md5: c3805f58e988798b229487b6543a2445
+      size: 6669
+    outs:
+    - path: .\data\univariate
+      hash: md5
+      md5: d86df834c6f9dc4b7e5bf4ab80287439.dir
+      size: 1626222
+      nfiles: 33
