@@ -428,7 +428,6 @@ def get_scores_distribution(X: pd.DataFrame, y: pd.Series, score_table: pd.DataF
         .sort_index()
     )
     bad_rate = tot_bads / tot_perband
-    print(bad_rate)
     bad_rate.plot.line(color="red", marker="o", linewidth=3, label="Bad Rate")
     plt.legend()
 

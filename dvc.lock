@@ -30,8 +30,8 @@ stages:
       size: 1505
     - path: .\src\functions.py
       hash: md5
-      md5: 3d8a2e930f0a483948a1131bd62b481d
-      size: 16045
+      md5: 85fb173c4c8af0034e3b400c16ce17d3
+      size: 15767
     - path: .\src\portfolio.py
       hash: md5
       md5: fbd0baf951e694531a91d5f011d09850
@@ -59,8 +59,8 @@ stages:
       size: 1505
     - path: .\src\functions.py
       hash: md5
-      md5: 3d8a2e930f0a483948a1131bd62b481d
-      size: 16045
+      md5: 85fb173c4c8af0034e3b400c16ce17d3
+      size: 15767
     - path: .\src\univariate.py
       hash: md5
       md5: 34ebe3cc8c44fdfd42c141b4a5d0a6c4
@@ -92,8 +92,8 @@ stages:
       size: 222
     - path: .\src\functions.py
       hash: md5
-      md5: 3d8a2e930f0a483948a1131bd62b481d
-      size: 16045
+      md5: 85fb173c4c8af0034e3b400c16ce17d3
+      size: 15767
     - path: .\src\modeling.py
       hash: md5
       md5: 28080fd0eeaaf15d37757951ad748009
@@ -101,6 +101,6 @@ stages:
     outs:
     - path: .\data\modeling\
       hash: md5
-      md5: 447fb9f19eec141fd660c6c42bec87fc.dir
+      md5: b78b74582bace01803dd0f300efb510a.dir
       size: 32210
       nfiles: 3
