@@ -59,6 +59,9 @@ metrics_to_print.append(func.auroc(X_train, y_train, model, "train"))
 metrics_to_print.append(func.auroc(X_test, y_test, model, "test"))
 metrics_to_print.append("\n")
 
+operation = 1+3
+print(f'operation result: {operation}')
+
 scores_table = func.get_scores_table(
     train[x_shortlisted], model, ref_odds=100, ref_score=500, pdo=40
 )
